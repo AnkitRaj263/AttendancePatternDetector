@@ -1,0 +1,272 @@
+import java.io.*;
+import java.util.*;
+
+public class AttendancePatternDetector {
+
+    static Stack<Set<String>> attendanceStack = new Stack<>();
+    static Scanner sc = new Scanner(System.in);
+
+    public static void main(String[] args) {
+
+        System.out.println(">> Student Attendance Pattern Detector");
+
+        boolean running = true;
+        while (running) {
+            System.out.println("\n--- MENU ---");
+            System.out.println("1. Record Today's Attendance");
+            System.out.println("2. View Attendance History");
+            System.out.println("3. Find Consistently Present Students");
+            System.out.println("4. Find Students with Irregular Attendance");
+            System.out.println("5. Search Attendance by Student ID");
+            System.out.println("6. Undo Last Attendance Entry");
+            System.out.println("7. Save Attendance to File");
+            System.out.println("8. Load Attendance from File");
+            System.out.println("0. Exit");
+            System.out.print("Choose an option: ");
+
+            int choice = sc.nextInt();
+            sc.nextLine();
+
+            switch (choice) {
+                case 1: recordAttendance(); break;
+                case 2: viewAttendanceHistory(); break;
+                case 3: findConsistentStudents(); break;
+                case 4: findIrregularStudents(); break;
+                case 5: searchStudentAttendance(); break;
+                case 6: undoLastEntry(); break;
+                case 7: saveToFile(); break;
+                case 8: loadFromFile(); break;
+                case 0: running = false; break;
+                default: System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    /*-------------------------
+         FEATURE 1
+      Record Attendance
+    --------------------------*/
+    public static void recordAttendance() {
+        System.out.print("Enter number of students present today: ");
+        int n = sc.nextInt();
+        sc.nextLine();
+
+        if (n <= 0) {
+            System.out.println("Invalid number.");
+            return;
+        }
+
+        Set<String> todayAttendance = new HashSet<>();
+
+        System.out.println("Enter student IDs (e.g., A101):");
+        while (todayAttendance.size() < n) {
+            System.out.print("Enter ID #" + (todayAttendance.size() + 1) + ": ");
+            String id = sc.nextLine().trim().toUpperCase();
+
+            if (todayAttendance.contains(id)) {
+                System.out.println("ID already entered! Enter another ID.");
+            } else {
+                todayAttendance.add(id);
+            }
+        }
+
+        attendanceStack.push(todayAttendance);
+        System.out.println(">> Today's attendance recorded.");
+    }
+
+    /*-------------------------
+         FEATURE 2
+     View Attendance History
+    --------------------------*/
+    public static void viewAttendanceHistory() {
+        if (attendanceStack.isEmpty()) {
+            System.out.println("No attendance records yet.");
+            return;
+        }
+
+        System.out.println("\nAttendance History (Latest to Oldest):");
+
+        for (int i = attendanceStack.size() - 1; i >= 0; i--) {
+            System.out.println("Day " + (i + 1) + ": " + attendanceStack.get(i));
+        }
+    }
+
+    /*-------------------------
+         FEATURE 3
+  Find Consistently Present Students
+    --------------------------*/
+    public static void findConsistentStudents() {
+
+        if (attendanceStack.isEmpty()) {
+            System.out.println("No attendance data available.");
+            return;
+        }
+
+        // Start with first day's students
+        Set<String> common = new HashSet<>(attendanceStack.get(0));
+
+        for (Set<String> day : attendanceStack) {
+            common.retainAll(day);
+        }
+
+        if (common.isEmpty()) {
+            System.out.println(">> No student attended all days.");
+        } else {
+            System.out.println(">> Students present on all days: " + common);
+        }
+    }
+
+    /*-------------------------
+         FEATURE 4
+     Find Irregular Students
+    --------------------------*/
+    public static void findIrregularStudents() {
+
+        if (attendanceStack.isEmpty()) {
+            System.out.println("No attendance data available.");
+            return;
+        }
+
+        Map<String, Integer> attendanceCount = new HashMap<>();
+
+        for (Set<String> day : attendanceStack) {
+            for (String student : day) {
+                attendanceCount.put(student, attendanceCount.getOrDefault(student, 0) + 1);
+            }
+        }
+
+        System.out.print("Enter threshold (minimum days required): ");
+        int threshold = sc.nextInt();
+        sc.nextLine();
+
+        List<String> irregular = new ArrayList<>();
+
+        for (String student : attendanceCount.keySet()) {
+            if (attendanceCount.get(student) < threshold) {
+                irregular.add(student);
+            }
+        }
+
+        if (irregular.isEmpty()) {
+            System.out.println(">> No irregular students found.");
+        } else {
+            System.out.println(">> Irregular students: " + irregular);
+        }
+    }
+
+    /*-------------------------
+         FEATURE 5
+    Search Attendance by ID
+    --------------------------*/
+    public static void searchStudentAttendance() {
+        if (attendanceStack.isEmpty()) {
+            System.out.println("No attendance data available.");
+            return;
+        }
+
+        System.out.print("Enter student ID: ");
+        String targetID = sc.nextLine().trim().toUpperCase();
+
+        int totalDaysPresent = 0;
+        List<Integer> presentDays = new ArrayList<>();
+
+        for (int i = 0; i < attendanceStack.size(); i++) {
+            if (attendanceStack.get(i).contains(targetID)) {
+                presentDays.add(i + 1);
+                totalDaysPresent++;
+            }
+        }
+
+        System.out.println("Student ID: " + targetID);
+        System.out.println("Total Days Present: " + totalDaysPresent);
+
+        if (presentDays.isEmpty()) {
+            System.out.println(">> Student was absent on all days.");
+        } else {
+            System.out.println("Present on Day(s): " + presentDays);
+        }
+    }
+
+    /*-------------------------
+         FEATURE 6
+       Undo Last Entry
+    --------------------------*/
+    public static void undoLastEntry() {
+
+        if (attendanceStack.isEmpty()) {
+            System.out.println("No attendance record to undo.");
+            return;
+        }
+
+        Set<String> removed = attendanceStack.pop();
+        System.out.println(">> Last day's attendance removed.");
+        System.out.println("Removed: " + removed);
+    }
+
+    /*-------------------------
+         FEATURE 7
+       Save To File
+    --------------------------*/
+    public static void saveToFile() {
+        System.out.print("Enter filename: ");
+        String filename = sc.nextLine();
+
+        try (FileWriter writer = new FileWriter(filename)) {
+
+            int day = attendanceStack.size();
+
+            // Save from oldest → newest
+            for (int i = 0; i < attendanceStack.size(); i++) {
+                writer.write("Day " + (i + 1) + ": ");
+
+                for (String id : attendanceStack.get(i)) {
+                    writer.write(id + " ");
+                }
+                writer.write("\n");
+            }
+
+            System.out.println(">> Attendance saved to " + filename);
+
+        } catch (IOException e) {
+            System.out.println(">> Error saving file: " + e.getMessage());
+        }
+    }
+
+    /*-------------------------
+         FEATURE 8
+       Load From File
+    --------------------------*/
+    public static void loadFromFile() {
+        System.out.print("Enter filename to load: ");
+        String filename = sc.nextLine();
+
+        try {
+            File file = new File(filename);
+            Scanner fs = new Scanner(file);
+
+            Stack<Set<String>> loaded = new Stack<>();
+
+            while (fs.hasNextLine()) {
+                String line = fs.nextLine().trim();
+
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split(":");
+                if (parts.length < 2) continue;
+
+                String[] ids = parts[1].trim().split("\\s+");
+
+                Set<String> daySet = new HashSet<>(Arrays.asList(ids));
+                loaded.push(daySet);
+            }
+
+            fs.close();
+            attendanceStack = loaded;
+
+            System.out.println(">> Attendance loaded successfully.");
+
+        } catch (IOException e) {
+            System.out.println(">> Error loading file: " + e.getMessage());
+        }
+    }
+}
